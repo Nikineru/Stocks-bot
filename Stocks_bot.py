@@ -88,9 +88,9 @@ def GetAmericanDate(date):
     return f"{GetStringFromDay(date.month)}/{GetStringFromDay(date.day)}/{GetStringFromDay(date.year)}"
 
 def GetStringFromDay(value):
-    return value if value > 10 else f"0{value}"
+    return value if value >= 10 else f"0{value}"
 
-path = r"C:\Users\isbud\OneDrive\Рабочий стол\Акции.xlsx"
+path = r"C:\Users\isbud\OneDrive\Рабочий стол\Stocks-bot\Акции.xlsx"
 book = openpyxl.load_workbook(path) 
 sheet = book.active
 
@@ -105,17 +105,26 @@ for row in sheet.iter_rows(max_col=1):
             RowOfLastTicker += 1
 
 StartDate = GetAmericanDate(sheet.cell(row=RowOfLastTicker + 1, column=1).value)
-EndDate = GetAmericanDate(sheet.cell(row=RowOfLastTicker + 1, column=2).value)
+EndDate = StartDate
+print(StartDate, EndDate)
 
 for ticker in Tickers:
     Data = GetStockData(ticker.value, StartDate, EndDate)
-    print(ticker.value)
-    print(f"Ценна - {Data[0]}")
+    WasBidding = False
     curret_data_index = 0
+
+
+    if len(Data[0]):
+        print(ticker.value)
+        print(f"Ценна - {Data[0]}")
+        WasBidding = True
 
     for row in sheet.iter_rows(min_row=ticker.row, max_row=ticker.row, min_col=2, max_col=ticker.column + 6):
         for cell in row:
-            sheet.cell(row=cell.row, column=cell.column).value = Data[0][0][curret_data_index]
+            if WasBidding:
+                sheet.cell(row=cell.row, column=cell.column).value = Data[0][0][curret_data_index]
+            else:
+                sheet.cell(row=cell.row, column=cell.column).value = "-"
             curret_data_index += 1
         curret_data_index = 0
 book.save(path)
