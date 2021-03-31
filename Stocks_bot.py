@@ -82,16 +82,6 @@ def GetStockData(ticker, start_date, end_date):
         else:
             AddQuote(i.text)
 
-    #workbook = xlsxwriter.Workbook(r"C:\Users\isbud\OneDrive\Рабочий стол\Акции.xlsx")
-    #worksheet = workbook.add_worksheet()
-
-    #for i in range(len(Dates)):
-    #    worksheet.write(i, 0, Dates[i])
-    #    for j in range(6):
-    #        worksheet.write(i, 1 + j, StockQuotes[i][j])
-
-    #workbook.close()
-
     return (StockQuotes, Dates, ExtraInfo)
 
 def GetAmericanDate(date):
@@ -105,20 +95,27 @@ book = openpyxl.load_workbook(path)
 sheet = book.active
 
 Tickers = list()
+RowOfLastTicker = 1
 
-StartDate = GetAmericanDate(sheet["A5"].value)
-EndDate = GetAmericanDate(sheet["B5"].value)
-
-for row in sheet.iter_rows(min_row=2, max_row=4, max_col=1):
+for row in sheet.iter_rows(max_col=1):
     for cell in row:
-        Tickers.append(cell)
+        value = str(cell.value)
+        if value.isupper() and value.isdigit() == False:
+            Tickers.append(cell)
+            RowOfLastTicker += 1
+
+StartDate = GetAmericanDate(sheet.cell(row=RowOfLastTicker + 1, column=1).value)
+EndDate = GetAmericanDate(sheet.cell(row=RowOfLastTicker + 1, column=2).value)
 
 for ticker in Tickers:
     Data = GetStockData(ticker.value, StartDate, EndDate)
     print(ticker.value)
     print(f"Ценна - {Data[0]}")
-    
-    for row in sheet.iter_rows(min_row=2, max_row=4, min_col=2, max_col=ticker.column + 7):
+    curret_data_index = 0
+
+    for row in sheet.iter_rows(min_row=ticker.row, max_row=ticker.row, min_col=2, max_col=ticker.column + 6):
         for cell in row:
-            cell = "Test"
+            sheet.cell(row=cell.row, column=cell.column).value = Data[0][0][curret_data_index]
+            curret_data_index += 1
+        curret_data_index = 0
 book.save(path)
