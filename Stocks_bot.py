@@ -1,100 +1,124 @@
 import requests
 import fake_useragent
-import xlsxwriter
+import openpyxl
 from bs4 import BeautifulSoup
 
-session = requests.Session()
-ticker = input("Тикер: ")
-URL = f'https://ru.investing.com/search/?q={ticker}'
-user = fake_useragent.UserAgent().random
 
-header = {
-    'user-agent': user
-}
+def GetStockData(ticker, start_date, end_date):
+    StockQuotes = list()
+    Dates = list()
+    ExtraInfo = list()
+    buffer = list()
 
-response = requests.get(URL, headers=header)
-soup = BeautifulSoup(response.content, 'html.parser')
-FirstStock = soup.find('a', class_ = 'js-inner-all-results-quote-item row')
-URL = 'https://ru.investing.com{}-historical-data'.format(FirstStock['href'])
+    session = requests.Session()
+    URL = f'https://ru.investing.com/search/?q={ticker}'
+    user = fake_useragent.UserAgent().random
 
-response = requests.get(URL, headers=header)
-soup = BeautifulSoup(response.content, 'html.parser')
-CurretPrice = soup.find('span', id = 'last_last')
-print(f"Текущая цена - {CurretPrice.text}")
-
-Stock_id = soup.find('div', class_ = 'headBtnWrapper float_lang_base_2 js-add-alert-widget')['data-pair-id']
-    
-params = {
-        "curr_id": Stock_id,
-        "smlID": 0,
-        "header": f'Прошлые данные - {ticker}',
-        'st_date': '03/01/2010',
-        'end_date': '03/03/2021',
-        "interval_sec": 'Daily',
-        "sort_col": "date",
-        "sort_ord": "DESC",
-        "action": "historical_data"
+    header = {
+        'user-agent': user
     }
 
-head = {
-    "User-Agent": user,
-    "X-Requested-With": "XMLHttpRequest",
-    "Accept": "text/html",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-}
+    response = requests.get(URL, headers=header)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    FirstStock = soup.find('a', class_ = 'js-inner-all-results-quote-item row')
+    URL = 'https://ru.investing.com{}-historical-data'.format(FirstStock['href'])
 
-URL = "https://www.investing.com/instruments/HistoricalDataAjax"
-Period_Data = requests.post(URL, headers=head, data=params)
+    response = requests.get(URL, headers=header)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    CurretPrice = soup.find('span', id = 'last_last')
 
-soup = BeautifulSoup(Period_Data.content, 'html.parser')
-StocksData = soup.findAll('td')
-StockQuotes = list()
-Dates = list()
-ExtraInfo = list()
-buffer = list()
-
-for i in StocksData:
-    if i.has_attr('class'):
-        stock_class = ' '.join(i['class'])
+    Stock_id = soup.find('div', class_ = 'headBtnWrapper float_lang_base_2 js-add-alert-widget')['data-pair-id']
         
-        if stock_class == 'first left bold noWrap':
-            Dates.append(i.text)
+    params = {
+            "curr_id": Stock_id,
+            "smlID": 0,
+            "header": f'Прошлые данные - {ticker}',
+            'st_date': StartDate,
+            'end_date': EndDate,
+            "interval_sec": 'Daily',
+            "sort_col": "date",
+            "sort_ord": "DESC",
+            "action": "historical_data"
+        }
 
-        elif stock_class == 'noBold noWrap left first' or stock_class == 'noWrap':
-            ExtraInfo.append(i.text)
+    head = {
+        "User-Agent": user,
+        "X-Requested-With": "XMLHttpRequest",
+        "Accept": "text/html",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+    }
 
-        else:
-            value = i.text.replace('%' , '')
-            value = value.replace('M' , '')
+    URL = "https://www.investing.com/instruments/HistoricalDataAjax"
+    Period_Data = requests.post(URL, headers=head, data=params)
 
-            buffer.append(float(value))
+    soup = BeautifulSoup(Period_Data.content, 'html.parser')
+    StocksData = soup.findAll('td')
 
-            if len(buffer) >= 6:
-                StockQuotes.append(buffer)
-                buffer = list()
-    else:
-        value = i.text.replace('%' , '')
-        value = value.replace('M' , '')
-        buffer.append(float(value))
+
+    def AddQuote(value):
+        nonlocal buffer
+        nonlocal StockQuotes
+
+        buffer.append(i.text)
 
         if len(buffer) >= 6:
             StockQuotes.append(buffer)
             buffer = list()
 
-workbook = xlsxwriter.Workbook(r"C:\Users\isbud\OneDrive\Рабочий стол\Акции.xlsx")
-worksheet = workbook.add_worksheet()
+    for i in StocksData:
+        if i.has_attr('class'):
+            stock_class = ' '.join(i['class'])
+            
+            if stock_class == 'first left bold noWrap':
+                Dates.append(i.text)
 
-for i in range(len(Dates)):
-    worksheet.write(i, 0, Dates[i])
-    for j in range(6):
-        worksheet.write(i, 1 + j, StockQuotes[i][j])
+            elif stock_class == 'noBold noWrap left first' or stock_class == 'noWrap':
+                ExtraInfo.append(i.text)
 
-# Тип диаграммы
-chart = workbook.add_chart({'type': 'line'})
- 
-# Строим по нашим данным
-chart.add_series({'values': f'=Sheet1!B1:B{len(Dates)}'})
- 
-worksheet.insert_chart('J1', chart)
-workbook.close()
+            else:
+                AddQuote(i.text)
+
+        else:
+            AddQuote(i.text)
+
+    #workbook = xlsxwriter.Workbook(r"C:\Users\isbud\OneDrive\Рабочий стол\Акции.xlsx")
+    #worksheet = workbook.add_worksheet()
+
+    #for i in range(len(Dates)):
+    #    worksheet.write(i, 0, Dates[i])
+    #    for j in range(6):
+    #        worksheet.write(i, 1 + j, StockQuotes[i][j])
+
+    #workbook.close()
+
+    return (StockQuotes, Dates, ExtraInfo)
+
+def GetAmericanDate(date):
+    return f"{GetStringFromDay(date.month)}/{GetStringFromDay(date.day)}/{GetStringFromDay(date.year)}"
+
+def GetStringFromDay(value):
+    return value if value > 10 else f"0{value}"
+
+path = r"C:\Users\isbud\OneDrive\Рабочий стол\Акции.xlsx"
+book = openpyxl.load_workbook(path) 
+sheet = book.active
+
+Tickers = list()
+
+StartDate = GetAmericanDate(sheet["A5"].value)
+EndDate = GetAmericanDate(sheet["B5"].value)
+
+for row in sheet.iter_rows(min_row=2, max_row=4, max_col=1):
+    for cell in row:
+        Tickers.append(cell)
+
+for ticker in Tickers:
+    Data = GetStockData(ticker.value, StartDate, EndDate)
+    print(ticker.value)
+    print(f"Ценна - {Data[0]}")
+    
+    for row in sheet.iter_rows(min_row=2, max_row=4, min_col=2, max_col=ticker.column + 7):
+        for cell in row:
+            cell = "Test"
+book.save(path)
