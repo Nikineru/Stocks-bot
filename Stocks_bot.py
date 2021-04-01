@@ -1,6 +1,8 @@
 import requests
 import fake_useragent
 import openpyxl
+import re
+import datetime
 from bs4 import BeautifulSoup
 
 
@@ -90,12 +92,61 @@ def GetAmericanDate(date):
 def GetStringFromDay(value):
     return value if value >= 10 else f"0{value}"
 
+def IsTicker(value:str):
+    value = value.replace(' ', '')
+
+    if re.search(r'[^A-Z]', value):
+        return False
+    else:
+        return True
+
+def GetInputPosition(sheet, path=r"C:\Users\isbud\OneDrive\Рабочий стол\Stocks-bot\InputData.txt"):
+    DatePos = None
+    TickerPos = None
+    
+    File = open(path, 'r')
+
+    lines = File.readlines()
+    _date = [int(i) for i in lines[0].split()]
+    _ticker = [int(i) for i in lines[1].split()]
+    
+    if type(sheet.cell(row=_date[0], column=_date[1]).value) == datetime.datetime:
+        DatePos = tuple(_date)
+
+    if IsTicker(str(sheet.cell(row=_ticker[0], column=_ticker[1]).value)):
+        TickerPos = tuple(_ticker)
+
+    File.close()
+
+    for row in sheet.rows:
+        for cell in row:
+            if TickerPos == None and IsTicker(str(cell.value)):
+                TickerPos = (cell.row, cell.column)
+
+            if DatePos == None and type(cell.value) == datetime.datetime:
+                DatePos = (cell.row, cell.column)
+            
+            if TickerPos != None and DatePos != None:
+                break
+    
+    File = open(path, 'w')
+    date = f"{DatePos[0]} {DatePos[1]}"
+    ticker = f"{TickerPos[0]} {TickerPos[1]}"
+
+    File.write(f"{date}\n{ticker}")
+    File.close()
+
+    return (DatePos, TickerPos)
+
 path = r"C:\Users\isbud\OneDrive\Рабочий стол\Stocks-bot\Акции.xlsx"
 book = openpyxl.load_workbook(path) 
 sheet = book.active
 
 Tickers = list()
 RowOfLastTicker = 1
+
+print(GetInputPosition(sheet))
+print("END")
 
 for row in sheet.iter_rows(max_col=1):
     for cell in row:
