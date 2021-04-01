@@ -118,23 +118,24 @@ def GetInputPosition(sheet, path=r"C:\Users\isbud\OneDrive\Рабочий сто
 
     File.close()
 
-    for row in sheet.rows:
-        for cell in row:
-            if TickerPos == None and IsTicker(str(cell.value)):
-                TickerPos = (cell.row, cell.column)
+    if DatePos == None or TickerPos == None:
+        for row in sheet.rows:
+            for cell in row:
+                if TickerPos == None and IsTicker(str(cell.value)):
+                    TickerPos = (cell.row, cell.column)
 
-            if DatePos == None and type(cell.value) == datetime.datetime:
-                DatePos = (cell.row, cell.column)
-            
-            if TickerPos != None and DatePos != None:
-                break
+                if DatePos == None and type(cell.value) == datetime.datetime:
+                    DatePos = (cell.row, cell.column)
+                
+                if TickerPos != None and DatePos != None:
+                    break
     
-    File = open(path, 'w')
-    date = f"{DatePos[0]} {DatePos[1]}"
-    ticker = f"{TickerPos[0]} {TickerPos[1]}"
+        File = open(path, 'w')
+        date = f"{DatePos[0]} {DatePos[1]}"
+        ticker = f"{TickerPos[0]} {TickerPos[1]}"
 
-    File.write(f"{date}\n{ticker}")
-    File.close()
+        File.write(f"{date}\n{ticker}")
+        File.close()
 
     return (DatePos, TickerPos)
 
@@ -145,19 +146,19 @@ sheet = book.active
 Tickers = list()
 RowOfLastTicker = 1
 
-print(GetInputPosition(sheet))
-print("END")
+Input = GetInputPosition(sheet)
 
-for row in sheet.iter_rows(max_col=1):
+for row in sheet.iter_rows(min_row=Input[1][0], max_col=1):
     for cell in row:
         value = str(cell.value)
         if value.isupper() and value.isdigit() == False:
             Tickers.append(cell)
             RowOfLastTicker += 1
 
-StartDate = GetAmericanDate(sheet.cell(row=RowOfLastTicker + 1, column=1).value)
+StartDate = GetAmericanDate(sheet.cell(row=Input[0][0], column=Input[0][1]).value)
 EndDate = StartDate
 print(StartDate, EndDate)
+print([i.value for i in Tickers])
 
 for ticker in Tickers:
     Data = GetStockData(ticker.value, StartDate, EndDate)
