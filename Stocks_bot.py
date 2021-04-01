@@ -3,6 +3,7 @@ import fake_useragent
 import openpyxl
 import re
 import datetime
+import calendar
 from bs4 import BeautifulSoup
 
 
@@ -23,7 +24,10 @@ def GetStockData(ticker, start_date, end_date):
     response = requests.get(URL, headers=header)
     soup = BeautifulSoup(response.content, 'html.parser')
     FirstStock = soup.find('a', class_ = 'js-inner-all-results-quote-item row')
-    URL = 'https://ru.investing.com{}-historical-data'.format(FirstStock['href'])
+    if FirstStock != None:
+        URL = 'https://ru.investing.com{}-historical-data'.format(FirstStock['href'])
+    else:
+        print(ticker)
 
     response = requests.get(URL, headers=header)
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -147,15 +151,18 @@ Tickers = list()
 RowOfLastTicker = 1
 
 Input = GetInputPosition(sheet)
-
 for row in sheet.iter_rows(min_row=Input[1][0], max_col=1):
     for cell in row:
         value = str(cell.value)
         if value.isupper() and value.isdigit() == False:
             Tickers.append(cell)
             RowOfLastTicker += 1
+Date = sheet.cell(row=Input[0][0], column=Input[0][1]).value
+StartDate = GetAmericanDate(Date)
+if Date > datetime.datetime.now():
+    print("Введите корректную дату")
+    exit()
 
-StartDate = GetAmericanDate(sheet.cell(row=Input[0][0], column=Input[0][1]).value)
 EndDate = StartDate
 print(StartDate, EndDate)
 print([i.value for i in Tickers])
@@ -170,6 +177,8 @@ for ticker in Tickers:
         print(ticker.value)
         print(f"Ценна - {Data[0]}")
         WasBidding = True
+    else:
+        print(f"Ценн по данной, ведь это - {calendar.day_abbr[Date.weekday()]}")
 
     for row in sheet.iter_rows(min_row=ticker.row, max_row=ticker.row, min_col=2, max_col=ticker.column + 6):
         for cell in row:
