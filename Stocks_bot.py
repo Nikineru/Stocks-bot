@@ -4,18 +4,18 @@ import openpyxl
 import re
 import datetime
 import calendar
+import ID_founder
+from time import time
 from bs4 import BeautifulSoup
 
+#ID_founder.main(file_name = r"C:\Users\isbud\OneDrive\Рабочий стол\Stocks.txt", text = 'russia GAZP')
+user = fake_useragent.UserAgent().random
+session = requests.Session()
 
-def GetStockData(ticker, start_date, end_date):
-    StockQuotes = list()
-    Dates = list()
-    ExtraInfo = list()
-    buffer = list()
+def GetStockData(ticker, search_date):
+    start = time()
 
-    session = requests.Session()
     URL = f'https://ru.investing.com/search/?q={ticker}'
-    user = fake_useragent.UserAgent().random
 
     header = {
         'user-agent': user
@@ -23,6 +23,7 @@ def GetStockData(ticker, start_date, end_date):
 
     response = requests.get(URL, headers=header)
     soup = BeautifulSoup(response.content, 'html.parser')
+
     FirstStock = soup.find('a', class_ = 'js-inner-all-results-quote-item row')
     if FirstStock != None:
         URL = 'https://ru.investing.com{}-historical-data'.format(FirstStock['href'])
@@ -31,16 +32,15 @@ def GetStockData(ticker, start_date, end_date):
 
     response = requests.get(URL, headers=header)
     soup = BeautifulSoup(response.content, 'html.parser')
-    CurretPrice = soup.find('span', id = 'last_last')
 
     Stock_id = soup.find('div', class_ = 'headBtnWrapper float_lang_base_2 js-add-alert-widget')['data-pair-id']
-        
+    print(f"ID - {Stock_id}") 
     params = {
             "curr_id": Stock_id,
             "smlID": 0,
             "header": f'Прошлые данные - {ticker}',
-            'st_date': StartDate,
-            'end_date': EndDate,
+            'st_date': search_date,
+            'end_date': search_date,
             "interval_sec": 'Daily',
             "sort_col": "date",
             "sort_ord": "DESC",
@@ -59,36 +59,11 @@ def GetStockData(ticker, start_date, end_date):
     Period_Data = requests.post(URL, headers=head, data=params)
 
     soup = BeautifulSoup(Period_Data.content, 'html.parser')
-    StocksData = soup.findAll('td')
+    StocksQuote = soup.find("td", { "class" : re.compile(r"^(greenFont|redFont)$") })['data-real-value']
 
-
-    def AddQuote(value):
-        nonlocal buffer
-        nonlocal StockQuotes
-
-        buffer.append(i.text)
-
-        if len(buffer) >= 6:
-            StockQuotes.append(buffer)
-            buffer = list()
-
-    for i in StocksData:
-        if i.has_attr('class'):
-            stock_class = ' '.join(i['class'])
-            
-            if stock_class == 'first left bold noWrap':
-                Dates.append(i.text)
-
-            elif stock_class == 'noBold noWrap left first' or stock_class == 'noWrap':
-                ExtraInfo.append(i.text)
-
-            else:
-                AddQuote(i.text)
-
-        else:
-            AddQuote(i.text)
-
-    return (StockQuotes, Dates, ExtraInfo)
+    print(f"{ticker} : {StocksQuote}")
+    print("Время - {:.2F}".format(time() - start))
+    return StocksQuote
 
 def GetAmericanDate(date):
     return f"{GetStringFromDay(date.month)}/{GetStringFromDay(date.day)}/{GetStringFromDay(date.year)}"
@@ -111,14 +86,15 @@ def GetInputPosition(sheet, path=r"C:\Users\isbud\OneDrive\Рабочий сто
     File = open(path, 'r')
 
     lines = File.readlines()
-    _date = [int(i) for i in lines[0].split()]
-    _ticker = [int(i) for i in lines[1].split()]
-    
-    if type(sheet.cell(row=_date[0], column=_date[1]).value) == datetime.datetime:
-        DatePos = tuple(_date)
+    if len(lines) > 0:
+        _date = [int(i) for i in lines[0].split()]
+        _ticker = [int(i) for i in lines[1].split()]
+        
+        if type(sheet.cell(row=_date[0], column=_date[1]).value) == datetime.datetime:
+            DatePos = tuple(_date)
 
-    if IsTicker(str(sheet.cell(row=_ticker[0], column=_ticker[1]).value)):
-        TickerPos = tuple(_ticker)
+        if IsTicker(str(sheet.cell(row=_ticker[0], column=_ticker[1]).value)):
+            TickerPos = tuple(_ticker)
 
     File.close()
 
@@ -157,6 +133,7 @@ for row in sheet.iter_rows(min_row=Input[1][0], max_col=1):
         if value.isupper() and value.isdigit() == False:
             Tickers.append(cell)
             RowOfLastTicker += 1
+
 Date = sheet.cell(row=Input[0][0], column=Input[0][1]).value
 StartDate = GetAmericanDate(Date)
 if Date > datetime.datetime.now():
@@ -168,24 +145,6 @@ print(StartDate, EndDate)
 print([i.value for i in Tickers])
 
 for ticker in Tickers:
-    Data = GetStockData(ticker.value, StartDate, EndDate)
-    WasBidding = False
-    curret_data_index = 0
-
-
-    if len(Data[0]):
-        print(ticker.value)
-        print(f"Ценна - {Data[0]}")
-        WasBidding = True
-    else:
-        print(f"Ценн по данной, ведь это - {calendar.day_abbr[Date.weekday()]}")
-
-    for row in sheet.iter_rows(min_row=ticker.row, max_row=ticker.row, min_col=2, max_col=ticker.column + 6):
-        for cell in row:
-            if WasBidding:
-                sheet.cell(row=cell.row, column=cell.column).value = Data[0][0][curret_data_index]
-            else:
-                sheet.cell(row=cell.row, column=cell.column).value = "-"
-            curret_data_index += 1
-        curret_data_index = 0
+    Quote = GetStockData(ticker.value, StartDate)
+    sheet.cell(row=ticker.row, column=ticker.column + 1).value = Quote
 book.save(path)
