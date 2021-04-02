@@ -1,22 +1,16 @@
-import requests
-import fake_useragent
-import openpyxl
+import requests, fake_useragent, openpyxl
 import re
-import datetime
-import calendar
+import datetime, calendar, os
 import ID_founder
+import pickle 
 from time import time
 from bs4 import BeautifulSoup
 
-#ID_founder.main(file_name = r"C:\Users\isbud\OneDrive\Рабочий стол\Stocks.txt", text = 'russia GAZP')
 user = fake_useragent.UserAgent().random
 session = requests.Session()
 
 
 def GetStockData(Stock_id, search_date):
-    start = time()
-
-    print(f"ID - {Stock_id}") 
     params = {
             "curr_id": Stock_id,
             "smlID": 0,
@@ -41,10 +35,9 @@ def GetStockData(Stock_id, search_date):
     Period_Data = requests.post(URL, headers=head, data=params)
 
     soup = BeautifulSoup(Period_Data.content, 'html.parser')
-    StocksQuote = soup.find("td", { "class" : re.compile(r"^(greenFont|redFont)$") })['data-real-value']
+    StocksQuote = soup.find("td", { "class" : re.compile(r"^(greenFont|redFont)$") })
 
-    print("Время - {:.2F}".format(time() - start))
-    return StocksQuote
+    return StocksQuote['data-real-value'] if StocksQuote != None else None
 
 def GetStockCountry(Ticker):
     URL = f'https://ru.investing.com/search/?q={Ticker}'
@@ -85,20 +78,23 @@ def GetInputPosition(sheet, path=r"C:\Users\isbud\OneDrive\Рабочий сто
     DatePos = None
     TickerPos = None
     
-    File = open(path, 'r')
+    if os.path.getsize(path) > 0:
+        with open(path,'rb') as inp:
+            load_data = pickle.load(inp)
+            _date = (0, 0)
+            _ticker = (0, 0)
 
-    lines = File.readlines()
-    if len(lines) > 0:
-        _date = [int(i) for i in lines[0].split()]
-        _ticker = [int(i) for i in lines[1].split()]
-        
-        if type(sheet.cell(row=_date[0], column=_date[1]).value) == datetime.datetime:
-            DatePos = tuple(_date)
+            if len(load_data) > 0:
+                _date = load_data[0]
+                _ticker = load_data[1]
+                
+                if type(sheet.cell(row=_date[0], column=_date[1]).value) == datetime.datetime:
+                    DatePos = _date
 
-        if IsTicker(str(sheet.cell(row=_ticker[0], column=_ticker[1]).value)):
-            TickerPos = tuple(_ticker)
-
-    File.close()
+                if IsTicker(str(sheet.cell(row=_ticker[0], column=_ticker[1]).value)):
+                    TickerPos = _ticker
+    else:
+        print("Тут ничего нет ;/")
 
     if DatePos == None or TickerPos == None:
         for row in sheet.rows:
@@ -119,8 +115,13 @@ def GetInputPosition(sheet, path=r"C:\Users\isbud\OneDrive\Рабочий сто
         File.write(f"{date}\n{ticker}")
         File.close()
 
+        with open(path,'wb') as out:
+            save_data = [DatePos, TickerPos]
+            pickle.dump(save_data,out)
+
     return (DatePos, TickerPos)
 
+start_time = time()
 path = r"C:\Users\isbud\OneDrive\Рабочий стол\Stocks-bot\Акции.xlsx"
 book = openpyxl.load_workbook(path) 
 sheet = book.active
@@ -138,24 +139,34 @@ for row in sheet.iter_rows(min_row=Input[1][0], max_col=1):
             RowOfLastTicker += 1
 
 Date = sheet.cell(row=Input[0][0], column=Input[0][1]).value
+DayOfWeek = Date.weekday()
+if DayOfWeek > 4:
+    print(f"В {calendar.day_name[Date.weekday()].lower()} торги не ведутся, введите другой день!")
+    exit()
+
 StartDate = GetAmericanDate(Date)
 if Date > datetime.datetime.now():
     print("Введите корректную дату")
     exit()
 
 EndDate = StartDate
-print(StartDate, EndDate)
-print([i[0].value for i in Tickers])
+print(f"Я буду работать с данными тикерами: {', '.join([i[0].value for i in Tickers])}")
+print(f"Данные будут получены на: {Date}\n")
 
 for ticker_data in Tickers:
     ticker = ticker_data[0]
     country = ticker_data[1]
-    print(f'Work with {ticker.value}, {country.value}')
-    
+
     if country.value == None:
         country.value = GetStockCountry(ticker.value)
     
     StockID = ID_founder.GetStockData(ticker=ticker.value, country=country.value)
     Quote = GetStockData(StockID, StartDate)
+
+    if Quote == None:
+        Quote = '-'
+
     sheet.cell(row=ticker.row, column=ticker.column + 2).value = Quote
+    print(f"Я получил акцию с тикером {ticker.value}, её котировка - {Quote}")
 book.save(path)
+print('Я выполнил свою работу за - {:0.2f} секунд!'.format(time() - start_time))
