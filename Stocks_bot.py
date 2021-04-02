@@ -12,28 +12,10 @@ from bs4 import BeautifulSoup
 user = fake_useragent.UserAgent().random
 session = requests.Session()
 
-def GetStockData(ticker, search_date):
+
+def GetStockData(Stock_id, search_date):
     start = time()
 
-    URL = f'https://ru.investing.com/search/?q={ticker}'
-
-    header = {
-        'user-agent': user
-    }
-
-    response = requests.get(URL, headers=header)
-    soup = BeautifulSoup(response.content, 'html.parser')
-
-    FirstStock = soup.find('a', class_ = 'js-inner-all-results-quote-item row')
-    if FirstStock != None:
-        URL = 'https://ru.investing.com{}-historical-data'.format(FirstStock['href'])
-    else:
-        print(ticker)
-
-    response = requests.get(URL, headers=header)
-    soup = BeautifulSoup(response.content, 'html.parser')
-
-    Stock_id = soup.find('div', class_ = 'headBtnWrapper float_lang_base_2 js-add-alert-widget')['data-pair-id']
     print(f"ID - {Stock_id}") 
     params = {
             "curr_id": Stock_id,
@@ -61,9 +43,29 @@ def GetStockData(ticker, search_date):
     soup = BeautifulSoup(Period_Data.content, 'html.parser')
     StocksQuote = soup.find("td", { "class" : re.compile(r"^(greenFont|redFont)$") })['data-real-value']
 
-    print(f"{ticker} : {StocksQuote}")
     print("Время - {:.2F}".format(time() - start))
     return StocksQuote
+
+def GetStockCountry(Ticker):
+    URL = f'https://ru.investing.com/search/?q={Ticker}'
+
+    header = {
+        'user-agent': user
+    }
+
+    response = requests.get(URL, headers=header)
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    FirstStock = soup.find('a', class_ = 'js-inner-all-results-quote-item row')
+    if FirstStock != None:
+        URL = 'https://www.investing.com{}'.format(FirstStock['href'])
+    else:
+        print("I can`t frind stock data")
+
+    response = requests.get(URL, headers=header)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    country_data = soup.find_all('a', class_='font-bold text-secondary hover:underline')
+    return country_data[2].text.lower()
 
 def GetAmericanDate(date):
     return f"{GetStringFromDay(date.month)}/{GetStringFromDay(date.day)}/{GetStringFromDay(date.year)}"
@@ -131,7 +133,8 @@ for row in sheet.iter_rows(min_row=Input[1][0], max_col=1):
     for cell in row:
         value = str(cell.value)
         if value.isupper() and value.isdigit() == False:
-            Tickers.append(cell)
+            country = sheet.cell(row=cell.row, column=cell.column + 1)
+            Tickers.append((cell, country))
             RowOfLastTicker += 1
 
 Date = sheet.cell(row=Input[0][0], column=Input[0][1]).value
@@ -142,9 +145,17 @@ if Date > datetime.datetime.now():
 
 EndDate = StartDate
 print(StartDate, EndDate)
-print([i.value for i in Tickers])
+print([i[0].value for i in Tickers])
 
-for ticker in Tickers:
-    Quote = GetStockData(ticker.value, StartDate)
-    sheet.cell(row=ticker.row, column=ticker.column + 1).value = Quote
+for ticker_data in Tickers:
+    ticker = ticker_data[0]
+    country = ticker_data[1]
+    print(f'Work with {ticker.value}, {country.value}')
+    
+    if country.value == None:
+        country.value = GetStockCountry(ticker.value)
+    
+    StockID = ID_founder.GetStockData(ticker=ticker.value, country=country.value)
+    Quote = GetStockData(StockID, StartDate)
+    sheet.cell(row=ticker.row, column=ticker.column + 2).value = Quote
 book.save(path)
