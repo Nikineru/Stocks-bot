@@ -1,7 +1,8 @@
 import requests, fake_useragent, openpyxl
 import re
-import datetime, calendar, os
+import datetime, os
 import ID_founder
+from ID_founder import program_path
 import pickle 
 from time import time
 from bs4 import BeautifulSoup
@@ -9,6 +10,8 @@ from bs4 import BeautifulSoup
 user = fake_useragent.UserAgent().random
 session = requests.Session()
 
+
+days = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье']
 
 def GetStockData(Stock_id, search_date):
     params = {
@@ -74,10 +77,11 @@ def IsTicker(value:str):
     else:
         return True
 
-def GetInputPosition(sheet, path=r"C:\Users\isbud\OneDrive\Рабочий стол\Stocks-bot\InputData.txt"):
+def GetInputPosition(sheet, path="Data\\InputData.txt"):
     DatePos = None
     TickerPos = None
-    
+    path = program_path + path
+
     if os.path.getsize(path) > 0:
         with open(path,'rb') as inp:
             load_data = pickle.load(inp)
@@ -107,13 +111,6 @@ def GetInputPosition(sheet, path=r"C:\Users\isbud\OneDrive\Рабочий сто
                 
                 if TickerPos != None and DatePos != None:
                     break
-    
-        File = open(path, 'w')
-        date = f"{DatePos[0]} {DatePos[1]}"
-        ticker = f"{TickerPos[0]} {TickerPos[1]}"
-
-        File.write(f"{date}\n{ticker}")
-        File.close()
 
         with open(path,'wb') as out:
             save_data = [DatePos, TickerPos]
@@ -122,9 +119,26 @@ def GetInputPosition(sheet, path=r"C:\Users\isbud\OneDrive\Рабочий сто
     return (DatePos, TickerPos)
 
 start_time = time()
-path = r"C:\Users\isbud\OneDrive\Рабочий стол\Stocks-bot\Акции.xlsx"
-book = openpyxl.load_workbook(path) 
-sheet = book.active
+path_to_TablePath = (program_path + 'Data\\TablePath.txt').replace('\\', '/')
+path = ''
+
+if os.path.getsize(path_to_TablePath) > 0:
+    with open(path_to_TablePath,'rb') as inp:
+            path = pickle.load(inp)
+if len(path) < 1:
+    path = input("Введите путь до таблицы: ")
+    path = path.replace('\"', '')
+
+    if len(path) > 0:
+        with open(path_to_TablePath,'wb') as out:
+                pickle.dump(path, out)
+try:
+    book = openpyxl.load_workbook(path) 
+    sheet = book.active
+except:
+    f = open(path_to_TablePath, 'w')
+    f.close()
+    exit('Введите корректный путь')
 
 Tickers = list()
 RowOfLastTicker = 1
@@ -140,8 +154,9 @@ for row in sheet.iter_rows(min_row=Input[1][0], max_col=1):
 
 Date = sheet.cell(row=Input[0][0], column=Input[0][1]).value
 DayOfWeek = Date.weekday()
+
 if DayOfWeek > 4:
-    print(f"В {calendar.day_name[Date.weekday()].lower()} торги не ведутся, введите другой день!")
+    print(f"В {days[Date.weekday()]} торги не ведутся, введите другой день!")
     exit()
 
 StartDate = GetAmericanDate(Date)
@@ -168,5 +183,10 @@ for ticker_data in Tickers:
 
     sheet.cell(row=ticker.row, column=ticker.column + 2).value = Quote
     print(f"Я получил акцию с тикером {ticker.value}, её котировка - {Quote}")
-book.save(path)
-print('Я выполнил свою работу за - {:0.2f} секунд!'.format(time() - start_time))
+
+try:
+    book.save(path)
+    print('Я выполнил свою работу за - {:0.2f} секунд!'.format(time() - start_time))
+    os.startfile(path)
+except:
+    print("Закройте numbers и перезапустите программу")

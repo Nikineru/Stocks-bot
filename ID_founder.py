@@ -1,6 +1,9 @@
 import pickle
+import os
 
-StocksPath = r"C:\Users\isbud\OneDrive\Рабочий стол\Stocks-bot\Stocks_data.txt"
+program_path = os.path.abspath(__file__)
+program_path = program_path[:program_path.rindex('\\') + 1]
+StocksPath = program_path + "Data\\Stocks_data.txt"
 StockData = dict()
 
 def Get_JSON_FromText():
