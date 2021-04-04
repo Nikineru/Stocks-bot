@@ -1,6 +1,6 @@
-import requests, fake_useragent, openpyxl
-import re
-import datetime, os
+import requests, fake_useragent, re 
+import openpyxl
+import datetime, os, shutil
 import ID_founder
 from ID_founder import program_path
 import pickle 
@@ -133,11 +133,16 @@ if len(path) < 1:
         with open(path_to_TablePath,'wb') as out:
                 pickle.dump(path, out)
 try:
+    reserve_path = path.split('\\')
+    reserve_path = '\\'.join(reserve_path[:len(reserve_path) - 1]) + '\\reserve_table.xlsx'
+    shutil.copyfile(path, reserve_path)
+
     book = openpyxl.load_workbook(path) 
     sheet = book.active
 except:
     f = open(path_to_TablePath, 'w')
     f.close()
+    wait = input('Нажмите Enter, для продолжения')
     exit('Введите корректный путь')
 
 Tickers = list()
@@ -157,11 +162,13 @@ DayOfWeek = Date.weekday()
 
 if DayOfWeek > 4:
     print(f"В {days[Date.weekday()]} торги не ведутся, введите другой день!")
+    wait = input('Нажмите Enter, для продолжения')
     exit()
 
 StartDate = GetAmericanDate(Date)
 if Date > datetime.datetime.now():
     print("Введите корректную дату")
+    wait = input('Нажмите Enter, для продолжения')
     exit()
 
 EndDate = StartDate
@@ -183,7 +190,7 @@ for ticker_data in Tickers:
 
     sheet.cell(row=ticker.row, column=ticker.column + 2).value = Quote
     print(f"Я получил акцию с тикером {ticker.value}, её котировка - {Quote}")
-
+    
 try:
     book.save(path)
     print('Я выполнил свою работу за - {:0.2f} секунд!'.format(time() - start_time))
