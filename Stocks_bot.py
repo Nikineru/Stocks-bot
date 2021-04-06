@@ -1,5 +1,4 @@
-import requests, fake_useragent, re 
-import openpyxl
+import requests, re, openpyxl
 import datetime, os, shutil
 import ID_founder
 from ID_founder import program_path
@@ -7,7 +6,7 @@ import pickle
 from time import time
 from bs4 import BeautifulSoup
 
-user = fake_useragent.UserAgent().random
+user = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1"
 session = requests.Session()
 
 
@@ -72,12 +71,12 @@ def GetStringFromDay(value):
 def IsTicker(value:str):
     value = value.replace(' ', '')
 
-    if re.search(r'[^A-Z]', value):
+    if re.search(r'[^A-Z_]', value):
         return False
     else:
         return True
 
-def GetInputPosition(sheet, path="Data\\InputData.txt"):
+def GetInputPosition(sheet, path="Data/InputData.txt"):
     DatePos = None
     TickerPos = None
     path = program_path + path
@@ -119,7 +118,7 @@ def GetInputPosition(sheet, path="Data\\InputData.txt"):
     return (DatePos, TickerPos)
 
 start_time = time()
-path_to_TablePath = (program_path + 'Data\\TablePath.txt').replace('\\', '/')
+path_to_TablePath = (program_path + 'Data/TablePath.txt')
 path = ''
 
 if os.path.getsize(path_to_TablePath) > 0:
@@ -128,13 +127,14 @@ if os.path.getsize(path_to_TablePath) > 0:
 if len(path) < 1:
     path = input("Введите путь до таблицы: ")
     path = path.replace('\"', '')
+    path = path.replace('\\', '/')
 
     if len(path) > 0:
         with open(path_to_TablePath,'wb') as out:
                 pickle.dump(path, out)
 try:
-    reserve_path = path.split('\\')
-    reserve_path = '\\'.join(reserve_path[:len(reserve_path) - 1]) + '\\reserve_table.xlsx'
+    reserve_path = path.split('/')
+    reserve_path = '/'.join(reserve_path[:len(reserve_path) - 1]) + '/reserve_table.xlsx'
     shutil.copyfile(path, reserve_path)
 
     book = openpyxl.load_workbook(path) 
@@ -149,11 +149,11 @@ Tickers = list()
 RowOfLastTicker = 1
 
 Input = GetInputPosition(sheet)
-for row in sheet.iter_rows(min_row=Input[1][0], max_col=1):
+for row in sheet.iter_rows(min_row=Input[1][0], min_col=1):
     for cell in row:
         value = str(cell.value)
-        if value.isupper() and value.isdigit() == False:
-            country = sheet.cell(row=cell.row, column=cell.column + 1)
+        if IsTicker(value):
+            country = sheet.cell(row=cell.row, column=Input[1][1] + 1)
             Tickers.append((cell, country))
             RowOfLastTicker += 1
 
@@ -178,22 +178,26 @@ print(f"Данные будут получены на: {Date}\n")
 for ticker_data in Tickers:
     ticker = ticker_data[0]
     country = ticker_data[1]
-
     if country.value == None:
         country.value = GetStockCountry(ticker.value)
+    tick_val = ticker.value
+
+    if '_P' in tick_val and tick_val.index('P') == len(tick_val) - 1:
+        tick_val = tick_val[:len(tick_val) - 1] + 'p'
     
-    StockID = ID_founder.GetStockData(ticker=ticker.value, country=country.value)
+    StockID = ID_founder.GetStockData(ticker=tick_val, country=country.value)
     Quote = GetStockData(StockID, StartDate)
 
     if Quote == None:
         Quote = '-'
 
     sheet.cell(row=ticker.row, column=ticker.column + 2).value = Quote
-    print(f"Я получил акцию с тикером {ticker.value}, её котировка - {Quote}")
+    print(f"Я получил акцию с тикером {tick_val}, её котировка - {Quote}")
     
 try:
     book.save(path)
     print('Я выполнил свою работу за - {:0.2f} секунд!'.format(time() - start_time))
     os.startfile(path)
+    #os.system(f"open {path}")
 except:
     print("Закройте numbers и перезапустите программу")
