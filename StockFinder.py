@@ -1,5 +1,6 @@
 import csv
 from pathlib import Path
+import pandas as pd
 
 class Security:
     def __init__(self, path):
@@ -8,10 +9,7 @@ class Security:
 
     def LoadCSV(self):
         RealPath = str(Path(__file__).parent.absolute()) + f"\\Resources\\{self.Path}"
-        File = open(RealPath, encoding='utf-8')
-
-        Data = list(csv.reader(File, delimiter = ","))
-        File.close()
+        Data = pd.read_csv(RealPath, keep_default_na=False)
         return Data
 
 class DataBaseWorker:
@@ -23,22 +21,23 @@ class DataBaseWorker:
     def __init__(self):
         self.Securities = [
             Security('stocks.csv'),
-            Security('bonds.csv'),
             Security('etfs.csv')]
     
     def FindSecurityByIndex(self, country, ticker, index):
-        if index > -1 and index < len(self.Securities):
-            for stock in self.Securities[index].Data:
-                if stock[0] == country and stock[-1] == ticker:
-                    return stock
-        return None
+        stocks = self.Securities[index].Data
+        result = list(stocks[(stocks['country'] == country) & (stocks['symbol'] == ticker)]['id'])
 
-    def FindSecurityData(self, country, ticker, security_index=-1):
-        if security_index == -1:
-            for index in range(len(self.Securities)):
-                stock = self.FindSecurityByIndex(country, ticker, index)
-
-                if stock != None:
-                    return stock
+        if len(result) > 0:
+            return result[0]
         else:
-            return self.FindSecurityByIndex(country, ticker, security_index)
+            return -1
+
+    def FindSecurityData(self, country, ticker):
+        for i in range(len(self.Securities)):
+            result = self.FindSecurityByIndex(country, ticker, i)
+
+            if result != -1:
+                return result
+    
+test = DataBaseWorker()
+print(test.FindSecurityData('vietnam', 'E1VFVN30'))
