@@ -8,7 +8,10 @@ class Security:
         self.Data = self.LoadCSV()
 
     def LoadCSV(self):
-        RealPath = str(Path(__file__).parent.absolute()) + f"\\Resources\\{self.Path}"
+        RealPath = str(Path(__file__).parent.absolute()).split('\\')
+        RealPath = RealPath[:-1]
+        RealPath = '/'.join(RealPath) + f"/Resources/{self.Path}"
+        
         Data = pd.read_csv(RealPath, keep_default_na=False)
         return Data
 
@@ -32,12 +35,9 @@ class DataBaseWorker:
         else:
             return -1
 
-    def FindSecurityData(self, country, ticker):
+    def FindSecurityID(self, country, ticker):
         for i in range(len(self.Securities)):
             result = self.FindSecurityByIndex(country, ticker, i)
 
             if result != -1:
                 return result
-    
-test = DataBaseWorker()
-print(test.FindSecurityData('vietnam', 'E1VFVN30'))

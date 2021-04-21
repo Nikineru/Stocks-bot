@@ -1,13 +1,16 @@
 import requests
 import fake_useragent
 import time
+import Config
 
+from StockFinder import DataBaseWorker
 from lxml.html import fromstring
 from random import randint
 
 class InvestBot:
     def __init__(self):
         self.User = fake_useragent.UserAgent().random
+        self.DB_Worker = DataBaseWorker()
 
     def GetStockPrice(self, Stock_id: int, search_date: str):
         params = {
@@ -70,10 +73,15 @@ class InvestBot:
         data = data[data.index('pairId') + 8:]
         return int(data[:data.index(',')])
 
-start = time.time()
 
-Bot = InvestBot()
-id_ = Bot.GetStockId('RU000A0ZZZ17')
-print(Bot.GetStockPrice(id_, '03/23/2021'))
+def main():
+    Bot = InvestBot()
 
-print(time.time() - start)
+    start = time.time()
+    id_ = Bot.DB_Worker.FindSecurityID('russia', 'GAZP')
+
+    print(Bot.GetStockPrice(id_, '03/23/2021'))
+    print(time.time() - start)
+
+if __name__ == '__main__':
+    main()
