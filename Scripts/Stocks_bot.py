@@ -3,13 +3,18 @@ import fake_useragent
 import time
 import Config
 
-from StockFinder import DataBaseWorker
 from lxml.html import fromstring
 from random import randint
+
+from Config import Config
+from TableWorker import TableWorker
+from StockFinder import DataBaseWorker
 
 class InvestBot:
     def __init__(self):
         self.User = fake_useragent.UserAgent().random
+        self.Config = Config()
+        self.TableWorker = TableWorker(self.Config)
         self.DB_Worker = DataBaseWorker()
 
     def GetStockPrice(self, Stock_id: int, search_date: str):
@@ -82,6 +87,7 @@ def main():
 
     print(Bot.GetStockPrice(id_, '03/23/2021'))
     print(time.time() - start)
+    Bot.Config.SaveConfig()
 
 if __name__ == '__main__':
     main()
