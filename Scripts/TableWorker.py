@@ -2,6 +2,7 @@ import openpyxl
 import os
 import re
 
+from datetime import datetime
 from Config import Config
 
 class TableWorker:
@@ -20,18 +21,57 @@ class TableWorker:
 
         self.Book = openpyxl.load_workbook(self.Path)
         self.Sheet = self.Book.active
-        self.Tickers = self.GetTickers()
+        TableData = self.GetTickersAndDate()
+        self.Tickers = TableData[0]
+        self.Date = TableData[1]
+        print(self.Date, self.Tickers)
     
-    def GetTickers(self):
-        TickerPos = self.Config.TickersStartPos
-        Ticker = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
+    def GetTickersAndDate(self):
+        TickerPos = list(self.Config.TickersStartPos)
+        Ticker = None
+
+        Date = None
+        Result = list()
+        FoundTicker = True
+        FoundDate = True
+
+        if len(TickerPos) > 0:
+            Ticker = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
+        
         if Ticker == None or self.IsTicker(Ticker):
-            for row in self.Sheet.rows:
-                for cell in row:
-                    if cell != None and self.IsTicker(str(cell.value)):
-                        TickerPos = (cell.row, cell.column)
-                        break
-        print(TickerPos)
+            FoundTicker = False
+
+        for row in self.Sheet.columns:
+            for cell in row:
+                if cell != None:
+                    if FoundTicker is False and self.IsTicker(str(cell.value)):
+                        TickerPos = [cell.row, cell.column]
+                        self.Config.TickersStartPos = TickerPos
+                        FoundTicker = True
+
+                    if type(cell.value) is datetime:
+                        Date = cell.value
+                        self.Config.DatePos = [cell.row, cell.column]
+                        if FoundTicker:
+                            break
+        
+        while True:
+            try:
+                cell = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
+
+                if cell != None and self.IsTicker(cell):
+                    if '_P' in cell:
+                        cell = cell[:cell.index('_P')] + '_p'
+                        
+                    Result.append((cell, self.Sheet.cell(row=TickerPos[0], column=TickerPos[1] + 1).value))
+
+                elif cell != None:
+                    break
+                TickerPos[0] += 1
+            except:
+                break
+        
+        return (Result, Date)
     
     def IsTicker(self, value:str):
-        return re.search(r'[^A-Z_p]', value) == None
+        return re.search(r'[^A-Z0-9_p]', value) == None

@@ -48,11 +48,13 @@ class InvestBot:
         root_ = fromstring(Period_Data.text)
         path_ = root_.xpath(".//table[@id='curr_table']/tbody/tr")
 
-        if path_[0].xpath(".//td")[0].text_content() == 'No results found':
+        if len(path_) < 1 or path_[0].xpath(".//td")[0].text_content() == 'No results found':
             print("Информаци не найдена...")
             return -1
 
-        return float(path_[0].xpath(".//td")[1].get('data-real-value'))
+        price = path_[0].xpath(".//td")[1].get('data-real-value')
+        price = price.replace(',', '')
+        return float(price)
 
     def GetStockId(self, ticker:str):
         URL = 'https://www.investing.com/search/?q=' + ticker
@@ -81,11 +83,18 @@ class InvestBot:
 
 def main():
     Bot = InvestBot()
-
     start = time.time()
-    id_ = Bot.DB_Worker.FindSecurityID('russia', 'GAZP')
 
-    print(Bot.GetStockPrice(id_, '03/23/2021'))
+    for ticker in Bot.TableWorker.Tickers:
+        id_ = Bot.DB_Worker.FindSecurityID(country=ticker[1], ticker=ticker[0])
+
+        if id_ == None:
+            id_ = Bot.GetStockId(ticker[0])
+            print("Search myself")
+
+        if id_ != -1:
+            print(ticker[0], Bot.GetStockPrice(id_, '03/23/2021'))
+        
     print(time.time() - start)
     Bot.Config.SaveConfig()
 
