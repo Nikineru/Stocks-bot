@@ -100,19 +100,19 @@ def GetStcoksPrice(tickers: list, finder:InvestBot):
 def main():
     Bot = InvestBot()
     start = time.time()
-    ThreadsCount = 6
-
+    ThreadsCount = Bot.Config.CPU_COUNT
     Tickers = np.array_split(Bot.TableWorker.Tickers, ThreadsCount)
-    
+    Quotes = list()
+
     with concurrent.futures.ThreadPoolExecutor() as executor:
         Threads = list()
 
         for i in range(ThreadsCount):
             Threads.append(executor.submit(GetStcoksPrice, Tickers[i], Bot))
 
-        return_value = [thread.result() for thread in Threads]
-        print(return_value)
+        Quotes = [thread.result() for thread in Threads]
 
+    print(Quotes)
     print(time.time() - start)
     #Bot.Config.SaveConfig()
 

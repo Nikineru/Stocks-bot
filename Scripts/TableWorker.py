@@ -24,7 +24,7 @@ class TableWorker:
         TableData = self.GetTickersAndDate()
         self.Tickers = TableData[0]
         self.Date = TableData[1]
-        #print(self.Date, self.Tickers)
+        print(f"Акции - {', '.join([tic[0] for tic in self.Tickers])} - за {self.Date}\n")
     
     def GetTickersAndDate(self):
         TickerPos = list(self.Config.TickersStartPos)
@@ -54,7 +54,7 @@ class TableWorker:
                         self.Config.DatePos = [cell.row, cell.column]
                         if FoundTicker:
                             break
-        
+        EmptyCellsCount = 0
         while True:
             try:
                 cell = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
@@ -64,9 +64,13 @@ class TableWorker:
                         cell = cell[:cell.index('_P')] + '_p'
                         
                     Result.append((cell, self.Sheet.cell(row=TickerPos[0], column=TickerPos[1] + 1).value))
-
-                elif cell != None:
+                    EmptyCellsCount = 0
+                else:
+                    EmptyCellsCount += 1
+                
+                if EmptyCellsCount > 1:
                     break
+                    
                 TickerPos[0] += 1
             except:
                 break

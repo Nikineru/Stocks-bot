@@ -1,4 +1,5 @@
 import json
+import psutil
 import os
 
 class Config:
@@ -8,6 +9,7 @@ class Config:
         return cls.instance
 
     def __init__(self, **kwargs):
+        self.CPU_COUNT = psutil.cpu_count()
         self.TablePath = ''
         self.TickersStartPos = tuple()
         self.DatePos = tuple()
