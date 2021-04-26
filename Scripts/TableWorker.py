@@ -24,7 +24,7 @@ class TableWorker:
         TableData = self.GetTickersAndDate()
         self.Tickers = TableData[0]
         self.Date = TableData[1]
-        print(self.Date, self.Tickers)
+        #print(self.Date, self.Tickers)
     
     def GetTickersAndDate(self):
         TickerPos = list(self.Config.TickersStartPos)

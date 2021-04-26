@@ -1,8 +1,9 @@
 import requests
 import fake_useragent
 import time
-import Config
+import numpy as np
 
+import concurrent.futures
 from lxml.html import fromstring
 from random import randint
 
@@ -80,23 +81,40 @@ class InvestBot:
         data = data[data.index('pairId') + 8:]
         return int(data[:data.index(',')])
 
+def GetStcoksPrice(tickers: list, finder:InvestBot):
+    Result = list()
+
+    for ticker in tickers:
+        id_ = finder.DB_Worker.FindSecurityID(country=ticker[1], ticker=ticker[0])
+    
+        if id_ == None:
+            id_ = finder.GetStockId(ticker[0])
+    
+        if id_ != -1:
+            price = finder.GetStockPrice(id_, '03/23/2021')
+            print(f"{ticker[0]} - {price}")
+            Result.append((ticker[0], price))
+    
+    return Result
 
 def main():
     Bot = InvestBot()
     start = time.time()
+    ThreadsCount = 6
 
-    for ticker in Bot.TableWorker.Tickers:
-        id_ = Bot.DB_Worker.FindSecurityID(country=ticker[1], ticker=ticker[0])
+    Tickers = np.array_split(Bot.TableWorker.Tickers, ThreadsCount)
+    
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        Threads = list()
 
-        if id_ == None:
-            id_ = Bot.GetStockId(ticker[0])
-            print("Search myself")
+        for i in range(ThreadsCount):
+            Threads.append(executor.submit(GetStcoksPrice, Tickers[i], Bot))
 
-        if id_ != -1:
-            print(ticker[0], Bot.GetStockPrice(id_, '03/23/2021'))
-        
+        return_value = [thread.result() for thread in Threads]
+        print(return_value)
+
     print(time.time() - start)
-    Bot.Config.SaveConfig()
+    #Bot.Config.SaveConfig()
 
 if __name__ == '__main__':
     main()
