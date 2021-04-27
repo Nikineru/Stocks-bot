@@ -82,7 +82,7 @@ class InvestBot:
         return int(data[:data.index(',')])
 
 def GetStcoksPrice(tickers: list, finder:InvestBot):
-    Result = list()
+    Result = dict()
 
     for ticker in tickers:
         id_ = finder.DB_Worker.FindSecurityID(country=ticker[1], ticker=ticker[0])
@@ -93,7 +93,7 @@ def GetStcoksPrice(tickers: list, finder:InvestBot):
         if id_ != -1:
             price = finder.GetStockPrice(id_, '03/23/2021')
             print(f"{ticker[0]} - {price}")
-            Result.append((ticker[0], price))
+            Result[ticker[0]] = price
     
     return Result
 
@@ -102,7 +102,7 @@ def main():
     start = time.time()
     ThreadsCount = Bot.Config.CPU_COUNT
     Tickers = np.array_split(Bot.TableWorker.Tickers, ThreadsCount)
-    Quotes = list()
+    Quotes = dict()
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         Threads = list()
@@ -110,11 +110,15 @@ def main():
         for i in range(ThreadsCount):
             Threads.append(executor.submit(GetStcoksPrice, Tickers[i], Bot))
 
-        Quotes = [thread.result() for thread in Threads]
+        buffer = [thread.result() for thread in Threads]
 
-    print(Quotes)
+        for tickers in buffer:
+            for ticker in tickers:
+                Quotes[ticker] = tickers[ticker]
+
+    Bot.TableWorker.WriteTickersPrice(Quotes)
     print(time.time() - start)
-    #Bot.Config.SaveConfig()
+    Bot.Config.SaveConfig()
 
 if __name__ == '__main__':
     main()

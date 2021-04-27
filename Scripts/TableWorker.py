@@ -18,16 +18,19 @@ class TableWorker:
         while os.path.exists(self.Path) is False:
             self.Path = input("Введите путь до таблицы: ").replace('\"', '')
             config.TablePath = self.Path
-
+        
         self.Book = openpyxl.load_workbook(self.Path)
         self.Sheet = self.Book.active
+        self.EndTickerPos = list()
         TableData = self.GetTickersAndDate()
         self.Tickers = TableData[0]
         self.Date = TableData[1]
+        print(self.EndTickerPos)
         print(f"Акции - {', '.join([tic[0] for tic in self.Tickers])} - за {self.Date}\n")
     
     def GetTickersAndDate(self):
         TickerPos = list(self.Config.TickersStartPos)
+        DatePos = list(self.Config.DatePos)
         Ticker = None
 
         Date = None
@@ -35,18 +38,25 @@ class TableWorker:
         FoundTicker = True
         FoundDate = True
 
-        if len(TickerPos) > 0:
+        if TableWorker.IsСoordinates(TickerPos):
             Ticker = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
         
-        if Ticker == None or self.IsTicker(Ticker):
+        if Ticker == None or TableWorker.IsTicker(Ticker) == False:
             FoundTicker = False
 
+        if TableWorker.IsСoordinates(DatePos):
+            Date = self.Sheet.cell(row=DatePos[0], column=DatePos[1]).value
+
+        if Date == None or type(Date) != datetime:
+            FoundDate = False
+            
+        print(FoundTicker, FoundDate)
         for row in self.Sheet.columns:
             for cell in row:
                 if cell != None:
-                    if FoundTicker is False and self.IsTicker(str(cell.value)):
+                    if FoundTicker is False and TableWorker.IsTicker(str(cell.value)):
                         TickerPos = [cell.row, cell.column]
-                        self.Config.TickersStartPos = TickerPos
+                        self.Config.TickersStartPos = TickerPos[:]
                         FoundTicker = True
 
                     if type(cell.value) is datetime:
@@ -59,7 +69,7 @@ class TableWorker:
             try:
                 cell = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
 
-                if cell != None and self.IsTicker(cell):
+                if cell != None and TableWorker.IsTicker(cell):
                     if '_P' in cell:
                         cell = cell[:cell.index('_P')] + '_p'
                         
@@ -74,8 +84,30 @@ class TableWorker:
                 TickerPos[0] += 1
             except:
                 break
-        
+        self.EndTickerPos = TickerPos[:]
         return (Result, Date)
     
-    def IsTicker(self, value:str):
+    def WriteTickersPrice(self, data:dict):
+        column = self.EndTickerPos[1]
+        for row in range(1, self.EndTickerPos[0]):
+            cell = self.Sheet.cell(row=row, column=column)
+
+            if cell is not None:
+                ticker = cell.value
+                self.Sheet.cell(row=row, column=column + 2).value = data[ticker.value]
+
+    @staticmethod
+    def IsСoordinates(value:list):
+        FirstCond = len(value) > 1
+
+        if FirstCond is False:
+            return False
+
+        SecondCond = value[0] > 0 and value[1] > 0
+        ThirdCond = value[0] < 1048576 and value[1] < 1048576
+
+        return SecondCond and ThirdCond
+
+    @staticmethod
+    def IsTicker(value:str):
         return re.search(r'[^A-Z0-9_p]', value) == None
