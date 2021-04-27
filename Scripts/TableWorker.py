@@ -92,9 +92,15 @@ class TableWorker:
         for row in range(1, self.EndTickerPos[0]):
             cell = self.Sheet.cell(row=row, column=column)
 
-            if cell is not None:
+            if cell is not None and cell.value is not None:
                 ticker = cell.value
-                self.Sheet.cell(row=row, column=column + 2).value = data[ticker.value]
+
+                if '_P' in ticker:
+                    ticker = ticker[:ticker.index('_P')] + '_p'
+                if ticker in data.keys():
+                    self.Sheet.cell(row=row, column=column + 2).value = data[ticker]
+        self.Book.save(self.Config.TablePath)
+        print("Таблица успешно изменена")
 
     @staticmethod
     def IsСoordinates(value:list):
