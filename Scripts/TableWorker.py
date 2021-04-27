@@ -25,6 +25,7 @@ class TableWorker:
         TableData = self.GetTickersAndDate()
         self.Tickers = TableData[0]
         self.Date = TableData[1]
+        self.Date = f"{self.Date.month}/{self.Date.day}/{self.Date.year}"
         print(self.EndTickerPos)
         print(f"Акции - {', '.join([tic[0] for tic in self.Tickers])} - за {self.Date}\n")
     
