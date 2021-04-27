@@ -85,15 +85,21 @@ def GetStcoksPrice(tickers: list, finder:InvestBot):
     Result = dict()
 
     for ticker in tickers:
-        id_ = finder.DB_Worker.FindSecurityID(country=ticker[1], ticker=ticker[0])
+        id_ = ticker[2]
+
+        if id_ == None:
+            id_ = finder.DB_Worker.FindSecurityID(country=ticker[1], ticker=ticker[0])
+            print("Search local")
     
         if id_ == None:
             id_ = finder.GetStockId(ticker[0])
+            print("Search online")
     
         if id_ != -1:
             price = finder.GetStockPrice(id_, '03/23/2021')
-            print(f"{ticker[0]} - {price}")
-            Result[ticker[0]] = price
+            ticker[2] = id_
+            print(f"{ticker[0]} - {price}, id: {ticker[2]}")
+            Result[ticker[0]] = (price, ticker[2])
     
     return Result
 

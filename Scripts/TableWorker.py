@@ -72,8 +72,10 @@ class TableWorker:
                 if cell != None and TableWorker.IsTicker(cell):
                     if '_P' in cell:
                         cell = cell[:cell.index('_P')] + '_p'
-                        
-                    Result.append((cell, self.Sheet.cell(row=TickerPos[0], column=TickerPos[1] + 1).value))
+                    
+                    country = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1] + 1).value
+                    id_ = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1] + 3).value
+                    Result.append((cell, country, id_))
                     EmptyCellsCount = 0
                 else:
                     EmptyCellsCount += 1
@@ -98,7 +100,9 @@ class TableWorker:
                 if '_P' in ticker:
                     ticker = ticker[:ticker.index('_P')] + '_p'
                 if ticker in data.keys():
-                    self.Sheet.cell(row=row, column=column + 2).value = data[ticker]
+                    self.Sheet.cell(row=row, column=column + 2).value = data[ticker][0]
+                    self.Sheet.cell(row=row, column=column + 3).value = data[ticker][1]
+
         self.Book.save(self.Config.TablePath)
         print("Таблица успешно изменена")
 
