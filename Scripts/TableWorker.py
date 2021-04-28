@@ -66,8 +66,10 @@ class TableWorker:
                         FoundDate = True
                         if FoundTicker:
                             break
-        if FoundDate is False:
-            print("Введите дату пожалуйста")
+        if FoundDate is False or FoundTicker is False:
+            print("В таблице отстутствуют дата или тикеры...")
+            exit()
+
         EmptyCellsCount = 0
         CashTickers = self.Config.StocksId_cash.keys()
         while True:
@@ -100,7 +102,7 @@ class TableWorker:
     
     def WriteTickersPrice(self, data:dict):
         column = self.EndTickerPos[1]
-        for row in range(1, self.EndTickerPos[0]):
+        for row in range(self.Config.TickersStartPos[0], self.EndTickerPos[0]):
             cell = self.Sheet.cell(row=row, column=column)
 
             if cell is not None and cell.value is not None:
