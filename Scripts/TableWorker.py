@@ -14,6 +14,7 @@ class TableWorker:
     def __init__(self, config, *args, **kwargs):
         self.Path = config.TablePath
         self.Config = config
+        self.Days = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
 
         while os.path.exists(self.Path) is False:
             self.Path = input("Введите путь до таблицы: ").replace('\"', '')
@@ -24,10 +25,10 @@ class TableWorker:
         self.EndTickerPos = list()
         TableData = self.GetTickersAndDate()
         self.Tickers = TableData[0]
-        self.Date = TableData[1]
-        self.Date = f"{self.Date.month}/{self.Date.day}/{self.Date.year}"
-        print(self.EndTickerPos)
-        print(f"Акции - {', '.join([tic[0] for tic in self.Tickers])} - за {self.Date}\n")
+        self.RealDate = TableData[1]
+        self.Date = f"{self.RealDate.month}/{self.RealDate.day}/{self.RealDate.year}"
+        print(f"Поиск за {self.RealDate.day}/{self.RealDate.month}/{self.RealDate.year}, это - {self.Days[self.RealDate.weekday()]}")
+        print(f"акции - {', '.join([tic[0] for tic in self.Tickers])}")
     
     def GetTickersAndDate(self):
         TickerPos = list(self.Config.TickersStartPos)
@@ -51,7 +52,6 @@ class TableWorker:
         if Date == None or type(Date) != datetime:
             FoundDate = False
             
-        print(FoundTicker, FoundDate)
         for row in self.Sheet.columns:
             for cell in row:
                 if cell != None:
@@ -63,9 +63,13 @@ class TableWorker:
                     if type(cell.value) is datetime:
                         Date = cell.value
                         self.Config.DatePos = [cell.row, cell.column]
+                        FoundDate = True
                         if FoundTicker:
                             break
+        if FoundDate is False:
+            print("Введите дату пожалуйста")
         EmptyCellsCount = 0
+        CashTickers = self.Config.StocksId_cash.keys()
         while True:
             try:
                 cell = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
@@ -75,7 +79,11 @@ class TableWorker:
                         cell = cell[:cell.index('_P')] + '_p'
                     
                     country = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1] + 1).value
-                    id_ = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1] + 3).value
+                    id_ = None
+                    
+                    if cell in CashTickers:
+                        id_ = self.Config.StocksId_cash[cell]
+                    
                     Result.append((cell, country, id_))
                     EmptyCellsCount = 0
                 else:
@@ -100,9 +108,9 @@ class TableWorker:
 
                 if '_P' in ticker:
                     ticker = ticker[:ticker.index('_P')] + '_p'
+
                 if ticker in data.keys():
-                    self.Sheet.cell(row=row, column=column + 2).value = data[ticker][0]
-                    self.Sheet.cell(row=row, column=column + 3).value = data[ticker][1]
+                    self.Sheet.cell(row=row, column=column + 2).value = data[ticker]
 
         self.Book.save(self.Config.TablePath)
         print("Таблица успешно изменена")

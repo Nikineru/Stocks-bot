@@ -2,8 +2,8 @@ import requests
 import fake_useragent
 import time
 import numpy as np
-
 import concurrent.futures
+
 from lxml.html import fromstring
 from random import randint
 
@@ -86,20 +86,24 @@ def GetStcoksPrice(tickers: list, finder:InvestBot):
 
     for ticker in tickers:
         id_ = ticker[2]
+        price = -1
 
         if id_ == None or id_ == -1:
             id_ = finder.DB_Worker.FindSecurityID(country=ticker[1], ticker=ticker[0])
+            finder.Config.StocksId_cash[ticker[0]] = id_
             print("Search local")
     
         if id_ == None:
             id_ = finder.GetStockId(ticker[0])
+            finder.Config.StocksId_cash[ticker[0]] = id_
             print("Search online")
     
         if id_ != -1:
             price = finder.GetStockPrice(id_, finder.TableWorker.Date)
-            ticker[2] = id_
-            print(f"{ticker[0]} - {price}, id: {ticker[2]}")
-            Result[ticker[0]] = (price, ticker[2])
+            
+        ticker[2] = id_
+        print(f"{ticker[0]} - {price}, id: {ticker[2]}")
+        Result[ticker[0]] = price
     
     return Result
 

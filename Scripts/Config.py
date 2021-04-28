@@ -10,6 +10,7 @@ class Config:
 
     def __init__(self, **kwargs):
         self.CPU_COUNT = psutil.cpu_count()
+        self.StocksId_cash = dict()
         self.TablePath = ''
         self.TickersStartPos = tuple()
         self.DatePos = tuple()
@@ -30,6 +31,7 @@ class Config:
                 self.TickersStartPos = data['TickersStartPos']
                 self.DatePos = data['DatePos']
                 self.TablePath = data['TablePath']
+                self.StocksId_cash = data['StocksId_cash']
                 print("Конфиг успешно загружен")
             except:
                 print("Произошла ошибка при загрузке")
