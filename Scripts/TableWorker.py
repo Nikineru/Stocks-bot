@@ -2,6 +2,7 @@ import openpyxl
 import os
 import re
 
+from Stock import Stock
 from datetime import datetime
 from Config import Config
 
@@ -28,15 +29,16 @@ class TableWorker:
         self.RealDate = TableData[1]
         self.Date = f"{self.RealDate.month}/{self.RealDate.day}/{self.RealDate.year}"
         print(f"Поиск за {self.RealDate.day}/{self.RealDate.month}/{self.RealDate.year}, это - {self.Days[self.RealDate.weekday()]}")
-        print(f"акции - {', '.join([tic[0] for tic in self.Tickers])}")
+        print(f"акции - {', '.join([tic.Ticker for tic in self.Tickers])}")
     
     def GetTickersAndDate(self):
         TickerPos = list(self.Config.TickersStartPos)
         DatePos = list(self.Config.DatePos)
-        Ticker = None
 
+        Ticker = None
         Date = None
         Result = list()
+
         FoundTicker = True
         FoundDate = True
 
@@ -66,27 +68,29 @@ class TableWorker:
                         FoundDate = True
                         if FoundTicker:
                             break
+        
         if FoundDate is False or FoundTicker is False:
             print("В таблице отстутствуют дата или тикеры...")
             exit()
 
         EmptyCellsCount = 0
         CashTickers = self.Config.StocksId_cash.keys()
+
         while True:
             try:
-                cell = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
+                ticker = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
 
-                if cell != None and TableWorker.IsTicker(cell):
-                    if '_P' in cell:
-                        cell = cell[:cell.index('_P')] + '_p'
+                if ticker != None and TableWorker.IsTicker(ticker):
+                    if TableWorker.IsPrivilegedTicker(ticker):
+                        ticker = TableWorker.MakePrivilegedTicker(ticker)
                     
                     country = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1] + 1).value
                     id_ = None
                     
-                    if cell in CashTickers:
-                        id_ = self.Config.StocksId_cash[cell]
+                    if ticker in CashTickers:
+                        id_ = self.Config.StocksId_cash[ticker]
                     
-                    Result.append((cell, country, id_))
+                    Result.append(Stock(ticker, country, id_))
                     EmptyCellsCount = 0
                 else:
                     EmptyCellsCount += 1
@@ -96,7 +100,9 @@ class TableWorker:
                     
                 TickerPos[0] += 1
             except:
+                print("Error")
                 break
+            
         self.EndTickerPos = TickerPos[:]
         return (Result, Date)
     
@@ -108,14 +114,28 @@ class TableWorker:
             if cell is not None and cell.value is not None:
                 ticker = cell.value
 
-                if '_P' in ticker:
-                    ticker = ticker[:ticker.index('_P')] + '_p'
+                if TableWorker.IsPrivilegedTicker(ticker):
+                        ticker = TableWorker.MakePrivilegedTicker(ticker)
 
                 if ticker in data.keys():
                     self.Sheet.cell(row=row, column=column + 2).value = data[ticker]
 
         self.Book.save(self.Config.TablePath)
         print("Таблица успешно изменена")
+
+    @staticmethod
+    def IsPrivilegedTicker(ticker:str):
+        if '_p' in ticker or '_P' in ticker:
+            return True
+        
+        return False
+
+    @staticmethod
+    def MakePrivilegedTicker(ticker:str):
+        if '_P' in ticker:
+            ticker = ticker[:ticker.index('_P')] + '_p'
+
+        return ticker
 
     @staticmethod
     def IsСoordinates(value:list):
