@@ -32,84 +32,31 @@ class TableWorker:
         print(f"акции - {', '.join([tic.Ticker for tic in self.Tickers])}")
     
     def GetTickersAndDate(self):
-        TickerPos = list(self.Config.TickersStartPos)
-        DatePos = list(self.Config.DatePos)
-
-        Ticker = None
-        Date = None
-        Result = list()
-
-        FoundTicker = True
-        FoundDate = True
-
-        if TableWorker.IsСoordinates(TickerPos):
-            Ticker = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
-        
-        if Ticker == None or TableWorker.IsTicker(Ticker) == False:
-            FoundTicker = False
-
-        if TableWorker.IsСoordinates(DatePos):
-            Date = self.Sheet.cell(row=DatePos[0], column=DatePos[1]).value
-
-        if Date == None or type(Date) != datetime:
-            FoundDate = False
-            
-        for row in self.Sheet.columns:
-            for cell in row:
-                if cell != None:
-                    if FoundTicker is False and TableWorker.IsTicker(str(cell.value)):
-                        TickerPos = [cell.row, cell.column]
-                        self.Config.TickersStartPos = TickerPos[:]
-                        FoundTicker = True
-
-                    if type(cell.value) is datetime:
-                        Date = cell.value
-                        self.Config.DatePos = [cell.row, cell.column]
-                        FoundDate = True
-                        if FoundTicker:
-                            break
-        
-        if FoundDate is False or FoundTicker is False:
-            print("В таблице отстутствуют дата или тикеры...")
-            exit()
-
-        EmptyCellsCount = 0
+        Tickers = list()
+        Date = datetime(2021, 3, 22)    
         CashTickers = self.Config.StocksId_cash.keys()
 
-        while True:
-            try:
-                ticker = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1]).value
 
-                if ticker != None and TableWorker.IsTicker(ticker):
+        for position in self.Config.TickersPoses:
+            ticker = self.Sheet.cell(row=position[0], column=position[1]).value
+
+            if ticker != None and TableWorker.IsTicker(ticker):
                     if TableWorker.IsPrivilegedTicker(ticker):
                         ticker = TableWorker.MakePrivilegedTicker(ticker)
                     
-                    country = self.Sheet.cell(row=TickerPos[0], column=TickerPos[1] + 1).value
+                    country = self.Sheet.cell(row=position[0], column=position[1] + 1).value
                     id_ = None
                     
                     if ticker in CashTickers:
                         id_ = self.Config.StocksId_cash[ticker]
                     
-                    Result.append(Stock(ticker, country, id_))
-                    EmptyCellsCount = 0
-                else:
-                    EmptyCellsCount += 1
-                
-                if EmptyCellsCount > 1:
-                    break
-                    
-                TickerPos[0] += 1
-            except:
-                print("Error")
-                break
-            
-        self.EndTickerPos = TickerPos[:]
-        return (Result, Date)
+                    Tickers.append(Stock(ticker, country, id_))
+    
+        return (Tickers, Date)
     
     def WriteTickersPrice(self, data:dict):
-        column = self.EndTickerPos[1]
-        for row in range(self.Config.TickersStartPos[0], self.EndTickerPos[0]):
-            cell = self.Sheet.cell(row=row, column=column)
+        for position in self.Config.TickersPoses:
+            cell = self.Sheet.cell(row=position[0], column=position[1])
 
             if cell is not None and cell.value is not None:
                 ticker = cell.value
@@ -118,13 +65,12 @@ class TableWorker:
                         ticker = TableWorker.MakePrivilegedTicker(ticker)
 
                 if ticker in data.keys():
-                    self.Sheet.cell(row=row, column=column + 2).value = data[ticker]
+                    self.Sheet.cell(row=position[0], column=position[1] + 2).value = data[ticker]
 
         path = self.Config.TablePath
         if '.xlsm' in path:
             path = path[:path.index('.xlsm')] + '_buffer.xlsx'
 
-        print(path)
         self.Book.save(path)
         print("Таблица успешно изменена")
 

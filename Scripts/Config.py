@@ -21,7 +21,8 @@ class Config:
         
         self.TickersPoses = list()
         with open('/'.join(DirectPath[:-1]) + "/Resources/CurretStocks.txt", 'r') as file:
-            self.TickersPoses = [list(i.rstrip().replace('\"', '').split(', ')) for i in file.readlines()]
+            for position in [list(i.rstrip().replace('\"', '').split(', ')) for i in file.readlines()]:
+                self.TickersPoses.append([int(i) for i in position])
 
         self.LoadConfig()
         print(self.TickersPoses)

@@ -88,7 +88,7 @@ def GetStcoksPrice(tickers: list, finder:InvestBot):
     for stock in tickers:
         id_ = stock.Id
         price = -1
-
+        
         if id_ == None or id_ == -1:
             id_ = finder.DB_Worker.FindSecurityID(country=stock.Country, ticker=stock.Ticker)
             finder.Config.StocksId_cash[stock.Ticker] = id_
