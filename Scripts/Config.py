@@ -15,11 +15,16 @@ class Config:
         self.TickersStartPos = tuple()
         self.DatePos = tuple()
 
-        self.ConfigPath = os.path.dirname(os.path.realpath(__file__)).split('\\')
-        self.ConfigPath = self.ConfigPath[:-1]
+        DirectPath = os.path.dirname(os.path.realpath(__file__)).split('\\')
+        self.ConfigPath = DirectPath[:-1]
         self.ConfigPath = '/'.join(self.ConfigPath) + f"/Resources/Config.json"
         
+        self.TickersPoses = list()
+        with open('/'.join(DirectPath[:-1]) + "/Resources/CurretStocks.txt", 'r') as file:
+            self.TickersPoses = [list(i.rstrip().replace('\"', '').split(', ')) for i in file.readlines()]
+
         self.LoadConfig()
+        print(self.TickersPoses)
 
     def LoadConfig(self):
         if os.path.exists(self.ConfigPath) is False:

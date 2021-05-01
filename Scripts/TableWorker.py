@@ -120,7 +120,12 @@ class TableWorker:
                 if ticker in data.keys():
                     self.Sheet.cell(row=row, column=column + 2).value = data[ticker]
 
-        self.Book.save(self.Config.TablePath)
+        path = self.Config.TablePath
+        if '.xlsm' in path:
+            path = path[:path.index('.xlsm')] + '_buffer.xlsx'
+
+        print(path)
+        self.Book.save(path)
         print("Таблица успешно изменена")
 
     @staticmethod
