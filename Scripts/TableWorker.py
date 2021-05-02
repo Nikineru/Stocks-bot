@@ -72,6 +72,7 @@ class TableWorker:
             path = path[:path.index('.xlsm')] + '_buffer.xlsx'
 
         self.Book.save(path)
+        os.startfile(path)
         print("Таблица успешно изменена")
 
     @staticmethod

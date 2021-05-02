@@ -8,8 +8,7 @@ class Security:
         self.Data = self.LoadCSV()
 
     def LoadCSV(self):
-        RealPath = str(Path(__file__).parent.absolute()).split('\\')
-        RealPath = RealPath[:-1]
+        RealPath = str(Path(__file__).parent.absolute()).split('\\')[:4]
         RealPath = '/'.join(RealPath) + f"/Resources/{self.Path}"
         
         Data = pd.read_csv(RealPath, keep_default_na=False)
