@@ -33,7 +33,7 @@ class TableWorker:
     
     def GetTickersAndDate(self):
         Tickers = list()
-        Date = datetime(2021, 3, 22)    
+        Date = self.Sheet.cell(row=1, column=1).value
         CashTickers = self.Config.StocksId_cash.keys()
 
 
