@@ -15,7 +15,7 @@ class Config:
         self.TickersStartPos = tuple()
         self.DatePos = tuple()
 
-        DirectPath = os.path.dirname(os.path.realpath(__file__)).split('\\')[:4]
+        DirectPath = Config.GetProgramPath()
         self.ConfigPath = DirectPath
         self.ConfigPath = '/'.join(self.ConfigPath) + f"/Resources/Config.json"
         
@@ -26,6 +26,11 @@ class Config:
 
         self.LoadConfig()
         print(self.TickersPoses)
+
+    @staticmethod
+    def GetProgramPath():
+        path = os.path.dirname(os.path.realpath(__file__)).split('\\')
+        return path[:path.index("Stocks-bot") + 1]
 
     def LoadConfig(self):
         if os.path.exists(self.ConfigPath) is False:

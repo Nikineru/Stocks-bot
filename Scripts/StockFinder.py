@@ -1,6 +1,7 @@
 import csv
 from pathlib import Path
 import pandas as pd
+from Config import Config
 
 class Security:
     def __init__(self, path):
@@ -8,7 +9,7 @@ class Security:
         self.Data = self.LoadCSV()
 
     def LoadCSV(self):
-        RealPath = str(Path(__file__).parent.absolute()).split('\\')[:4]
+        RealPath = Config.GetProgramPath()
         RealPath = '/'.join(RealPath) + f"/Resources/{self.Path}"
         
         Data = pd.read_csv(RealPath, keep_default_na=False)
